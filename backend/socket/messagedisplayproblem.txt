@@ -1,0 +1,290 @@
+import Conversation from "../models/conversation.model.js";
+import Message from "../models/message.model.js";
+import { getReceiverSocketId, io } from "../socket/socket.js";
+import User from '../models/user.model.js';  // Ensure the path is correct
+import Profile from '../models/Psychics/Profile.model.js';  // Ensure the path is correct
+import mongoose from 'mongoose';
+
+
+export const sendMessage = async (req, res) => {
+  try {
+      const { message } = req.body;
+      const { id: receiverId } = req.params;
+      let senderId;
+
+      if (req.psychics) {
+          senderId = req.psychics._id;
+      } else if (req.user) {
+          senderId = req.user._id;
+      }
+
+      let conversation = await Conversation.findOne({
+          participants: { $all: [senderId, receiverId] },
+      });
+
+      if (!conversation) {
+          conversation = await Conversation.create({
+              participants: [senderId, receiverId],
+          });
+      }
+
+      const newMessage = new Message({
+          senderId,
+          receiverId,
+          message,
+      });
+
+      conversation.messages.push(newMessage._id);
+      await Promise.all([conversation.save(), newMessage.save()]);
+
+      // Emit the new message to the receiver
+      const receiverSocketId = getReceiverSocketId(receiverId);
+      if (receiverSocketId) {
+          io.to(receiverSocketId).emit("newMessage", newMessage);
+      }
+
+      res.status(201).json(newMessage);
+  } catch (error) {
+      console.log("Error in sendMessage controller: ", error.message);
+      res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+
+export const getMessages = async (req, res) => {
+  try {
+      const { id: userToChatId } = req.params;
+
+      let senderId;
+      if (req.psychics) {
+          senderId = req.psychics._id;
+      } else if (req.user) {
+          senderId = req.user._id;
+      }
+
+      // Validate ObjectIds
+      if (!mongoose.Types.ObjectId.isValid(userToChatId) || !mongoose.Types.ObjectId.isValid(senderId)) {
+          return res.status(400).json({ error: "Invalid user ID" });
+      }
+
+      console.log(`Sender ID: ${senderId}, User to Chat ID: ${userToChatId}`);
+
+      const conversation = await Conversation.findOne({
+          participants: { $all: [senderId, userToChatId] },
+      }).populate("messages"); // Populate actual messages
+
+      if (!conversation) return res.status(200).json([]);
+
+      const messages = conversation.messages;
+
+      res.status(200).json(messages);
+  } catch (error) {
+      console.log("Error in getMessages controller: ", error.message);
+      res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+
+import express from "express";
+import { getMessages, sendMessage } from "../controllers/message.controller.js";
+import PsyprotectRoute from "../middleware/PsyprotectRoute.js";
+
+const router = express.Router();
+
+router.get("/:id", PsyprotectRoute, getMessages);
+router.post("/send/:id", PsyprotectRoute, sendMessage);
+
+export default router;
+
+on frontend message from user to psychics ..on psychics side message not show immediate show after reload page plz solve probblem 
+
+
+import { useEffect, useState } from "react";
+import usePsyConversation from "../zustand/usePsyConversation";
+import {toast} from "react-toastify";
+
+const usePsyGetMessages = () => {
+	const [loading, setLoading] = useState(false);
+	const { messages, setMessages, selectedConversation } = usePsyConversation();
+
+
+	useEffect(() => {
+		const getMessages = async () => {
+			setLoading(true);
+			try {
+				const res = await fetch(`/api/PsyMessage/${selectedConversation._id}`);
+				console.log(res)
+				const data = await res.json();
+				if (data.error) throw new Error(data.error);
+				setMessages(data);
+			} catch (error) {
+				toast.error(error.message);
+			} finally {
+				setLoading(false);
+			}
+		};
+
+		if (selectedConversation?._id) getMessages();
+	}, [selectedConversation?._id, setMessages]);
+
+	return { messages, loading };
+};
+export default usePsyGetMessages;import { useEffect, useState } from "react";
+import {toast} from "react-toastify";
+
+const useGetPsyConversations = () => {
+	const [loading, setLoading] = useState(false);
+	const [conversations, setConversations] = useState([]);
+
+	useEffect(() => {
+		const getConversations = async () => {
+			setLoading(true);
+			try {
+				const res = await fetch("/api/users");
+
+				const data = await res.json();
+				
+				if (data.error) {
+					throw new Error(data.error);
+				}
+				setConversations(data);
+			} catch (error) {
+				toast.error(error.message);
+			} finally {
+				setLoading(false);
+			}
+		};
+
+		getConversations();
+	}, []);
+
+	return { loading, conversations };
+};
+export default useGetPsyConversations;import { create } from "zustand";
+
+const usePsyConversation = create((set) => ({
+  selectedConversation: null,
+  setSelectedConversation: (selectedConversation) =>
+    set({ selectedConversation }),
+  messages: [],
+  setMessages: (messages) => set({ messages }),
+  typingStatus: false, // New state to track typing status
+  setTypingStatus: (status) => set({ typingStatus: status }),
+}));
+
+export default usePsyConversation;import { useEffect, useRef } from "react";
+import usePsyGetMessages from "../../../hooks/usePsyGetMessages";
+import MessageSkeleton from "../../../skeletons/MessageSkeleton";
+import PsyMessage from "./PsyMessage";
+import useListenMessages from "../../../hooks/useListenMessages";
+
+const PsyMessages = () => {
+  const { messages, loading } = usePsyGetMessages();
+  useListenMessages();
+  const lastMessageRef = useRef();
+
+  useEffect(() => {
+    setTimeout(() => {
+      lastMessageRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+  }, [messages]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault(); // Prevent the default behavior (auto-refresh)
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []); // Empty dependency array ensures that the effect is only run once
+
+  return (
+    <div className="card-body">
+        <div className="direct-chat-messages" style={{height:"350px"}}>
+        <div className="direct-chat-msg">
+          <div className="direct-chat-infos clearfix">
+            {!loading &&
+              messages.length > 0 &&
+              messages.map((message) => (
+                <div key={message._id} ref={lastMessageRef}>
+                  <PsyMessage message={message} />
+                </div>
+              ))}
+
+            {loading &&
+              [...Array(3)].map((_, idx) => <MessageSkeleton key={idx} />)}
+            {!loading && messages.length === 0 && (
+              <p className="text-center text-white">
+                Send a message to start the conversation
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default PsyMessages;import { PsyuseAuthContext } from "../../../context/PsyAuthContext";
+import { extractTime } from "../../../utils/extractTime";
+import usePsyConversation from "../../../zustand/usePsyConversation";
+
+const PsyMessage = ({ message }) => {
+  const { authPsychics } = PsyuseAuthContext();
+  const { selectedConversation } = usePsyConversation();
+
+  const fromMe = message.senderId === authPsychics._id;
+  const formattedTime = extractTime(message.createdAt);
+  const chatClassName = fromMe ? "right" : "left"; // Changed to "left" for better alignment with receiver messages
+  const profilePic = fromMe
+    ? authPsychics.profilePic
+    : selectedConversation?.profilePic;
+
+  // Apply blue background for psychics' sent messages and green for received messages
+  const bubbleBgColor = fromMe ? "bg-blue-400" : "bg-green-400";
+  const textColor = "text-black"; // Text color remains the same for both
+
+  const shakeClass = message.shouldShake ? "shake" : "";
+
+  return (
+    <div className={`direct-chat-msg ${chatClassName}`}>
+      <div className="direct-chat-infos clearfix">
+        <span
+          className={`direct-chat-name ${
+            fromMe ? "float-right text-black" : "float-left text-black"
+          }`}
+        >
+          {fromMe ? authPsychics.username : selectedConversation?.username}
+        </span>
+        <span
+          className={`direct-chat-timestamp ${
+            fromMe ? "float-left text-red-500" : "float-right text-red-500"
+          }`}
+        >
+          {formattedTime}
+        </span>
+      </div>
+      <img
+        className="direct-chat-img"
+        src={profilePic}
+        alt="message user image"
+      />
+      <div
+        className={`direct-chat-text ${bubbleBgColor} ${textColor} ${shakeClass} p-2 rounded-lg`}
+      >
+        {message.message}
+      </div>
+    </div>
+  );
+};
+
+export default PsyMessage;
+
+
+
+

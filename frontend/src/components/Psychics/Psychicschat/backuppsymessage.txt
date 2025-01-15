@@ -1,0 +1,540 @@
+import { useEffect, useState } from "react";
+import axios from "axios";
+import usePsyConversation from "../../../zustand/usePsyConversation";
+import PsyMessageInput from "./PsyMessageInput";
+import PsyMessages from "./PsyMessages";
+import { TiMessages } from "react-icons/ti";
+import { PsyuseAuthContext } from "../../../context/PsyAuthContext";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import notificationSound from './notification.mp3';
+
+const PsyMessageContainer = () => {
+  const {
+    selectedConversation,
+    setSelectedConversation,
+    typingStatus,
+    setTypingStatus,
+  } = usePsyConversation();
+  const { authPsychics, socket } = PsyuseAuthContext();
+  const [chatRequests, setChatRequests] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [ringtone, setRingtone] = useState(null);
+  const [notifiedRequests, setNotifiedRequests] = useState(new Set());
+  const [freeTimeRemaining, setFreeTimeRemaining] = useState(null); // Store the remaining free time in seconds
+  const [paidTimerRequests, setPaidTimerRequests] = useState([]);
+  const [paidTimeRemaining, setPaidTimeRemaining] = useState(null); 
+  const [walletBalance, setWalletBalance] = useState(0);
+const [ratePM, setRatePM] = useState(0);
+const [allowedPaidTime, setAllowedPaidTime] = useState(0); // in seconds
+
+  const POLLING_INTERVAL = 5000; // Poll every 5 seconds
+  
+  const fetchUserAndPsychicData = async (userId, psychicId) => {
+    try {
+      const { data } = await axios.get(`/api/paidtimer/data/${psychicId}/${userId}`);
+      console.log("Fetched data:", data);
+       // Log the entire response
+      setWalletBalance(data.walletBalance);
+      setRatePM(data.ratePerMinute);
+      console.log("Wallet Balance:", data.walletBalance);
+      console.log("Rate Per Minute:", data.ratePerMinute);
+    } catch (error) {
+      console.error("Error fetching user and psychic data:", error);
+    }
+  };
+  useEffect(() => {
+    if (selectedConversation && authPsychics) {
+      const userId = selectedConversation.userId || selectedConversation._id; 
+      if (!userId) return; 
+
+      fetchUserAndPsychicData(userId, authPsychics._id);
+    }
+  }, [selectedConversation, authPsychics]);
+
+  // Calculate allowed paid chat time based on wallet balance and rate
+  useEffect(() => {
+    if (walletBalance && ratePM) {
+      const timeInMinutes = walletBalance / ratePM;
+      setAllowedPaidTime(Math.floor(timeInMinutes * 60)); // Convert to seconds
+    }
+  }, [walletBalance, ratePM]);
+
+
+  
+  // Example useEffect to call fetchUserAndPsychicData when necessary
+  useEffect(() => {
+    if (selectedConversation && authPsychics) {
+        // Check the entire selectedConversation object
+        console.log("Selected Conversation:", selectedConversation);
+        
+        const userId = selectedConversation.userId || selectedConversation._id; // Adjust based on your data structure
+        if (!userId) {
+            console.error("User ID is missing in selectedConversation:", selectedConversation);
+            return; // Exit if userId is undefined
+        }
+        
+        console.log("Fetching data for userId:", userId);
+        console.log("Fetching data for psychicId:", authPsychics._id);
+        fetchUserAndPsychicData(userId, authPsychics._id);
+    } else {
+        console.log("selectedConversation or authPsychics is not defined.");
+    }
+}, [selectedConversation, authPsychics]);
+
+  // Fetch data on component mount or when the selected conversation changes
+  useEffect(() => {
+    if (authPsychics && selectedConversation) {
+      fetchUserAndPsychicData();
+    }
+  }, [authPsychics, selectedConversation]);
+
+
+  // Function to fetch free chat requests
+  const fetchFreeChatRequests = async () => {
+    try {
+      const response = await axios.get(`/api/timer/requests/${authPsychics._id}`);
+      const requests = response.data;
+  
+      const pendingRequests = requests.filter(request => request.freeTimerStatus === "pending");
+      setChatRequests(pendingRequests);
+    } catch (error) {
+      console.error("Failed to fetch free chat requests:", error);
+    }
+  };
+
+  // Poll for chat requests when the component mounts
+  useEffect(() => {
+    if (authPsychics && authPsychics._id) {
+      fetchFreeChatRequests(); // Initial fetch
+      const intervalId = setInterval(fetchFreeChatRequests, POLLING_INTERVAL); // Poll every 5 seconds
+      return () => clearInterval(intervalId);
+    }
+  }, [authPsychics]);
+
+  // Handle chat request notifications
+  useEffect(() => {
+    chatRequests.forEach((request) => {
+      if (request.freeTimerStatus === "pending" && !notifiedRequests.has(request._id)) {
+        toast.info(
+          <ChatRequestToast
+            request={request}
+            onAccept={handleAccept}
+            onReject={handleReject}
+            ringtone={ringtone}
+          />,
+          { autoClose: false }
+        );
+        setNotifiedRequests((prev) => new Set(prev).add(request._id));
+      }
+    });
+  }, [chatRequests, notifiedRequests, ringtone]);
+
+  // Start the free timer for 3 minutes (180 seconds)
+  const startFreeTimer = () => {
+    setFreeTimeRemaining(180); // Set to 3 minutes (180 seconds)
+
+    const countdown = setInterval(() => {
+      setFreeTimeRemaining(prev => {
+        if (prev === 1) {
+          clearInterval(countdown); // Clear the timer when time runs out
+          return null;
+        }
+        return prev - 1;
+      });
+    }, 1000); // Decrement by 1 second every second
+  };
+
+  // Handle accepting free chat requests
+  const handleAccept = async (requestId) => {
+    try {
+      const response = await axios.patch(`/api/timer/accept/${requestId}`);
+  
+      if (response.data.timerRequest) {
+        // Start the free timer when the request is accepted
+        startFreeTimer();
+        
+        // Update chat requests
+        setChatRequests((prevRequests) =>
+          prevRequests.map((req) =>
+            req._id === requestId ? { ...req, status: "accepted" } : req
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Error accepting chat request:", error);
+    }
+  };
+
+  // Handle rejecting chat requests
+  const handleReject = async (requestId) => {
+    try {
+      const response = await axios.patch(`/api/timer/reject/${requestId}`);
+
+      setChatRequests((prevRequests) =>
+        prevRequests.map((req) =>
+          req._id === requestId ? { ...req, status: "rejected" } : req
+        )
+      );
+
+      // Stop the ringtone
+      if (ringtone) {
+        ringtone.pause();
+        ringtone.currentTime = 0;
+      }
+    } catch (error) {
+      console.error("Error rejecting chat request:", error);
+      toast.error(`Failed to reject chat request: ${error.message}`);
+    }
+  };
+
+  useEffect(() => {
+    const audio = new Audio(notificationSound);
+    setRingtone(audio);
+  }, []);
+
+  useEffect(() => {
+    if (socket) {
+      socket.on("typing", ({ senderId, isTyping }) => {
+        if (senderId !== authPsychics._id) {
+          setTypingStatus(isTyping);
+        }
+      });
+    }
+    return () => {
+      if (socket) {
+        socket.off("typing");
+      }
+    };
+  }, [socket, authPsychics, setTypingStatus]);
+
+  useEffect(() => {
+    return () => setSelectedConversation(null);
+  }, [setSelectedConversation]);
+
+  const handleToggleStatus = async () => {
+    try {
+      const newStatus = busy ? "" : "busy";
+      await axios.put(`/api/psychics/data/${authPsychics._id}/busy`, {
+        status: newStatus,
+      });
+      setBusy(!busy);
+    } catch (error) {
+      console.error("Failed to toggle status", error);
+    }
+  };
+
+  const fetchPaidTimerRequests = async () => {
+    try {
+        const psychicId = authPsychics._id; 
+        const response = await axios.get(`/api/paidtimer/user-requests/${psychicId}`);
+        const requests = response.data;
+
+        if (!requests.length) {
+            console.log("No timer requests found for this psychic");
+            return;
+        }
+
+        setPaidTimerRequests(requests);
+    } catch (error) {
+        console.error("Failed to fetch paid timer requests:", error);
+    }
+};
+
+
+
+// Use effect hook to fetch requests on mount and set up polling
+useEffect(() => {
+    if (authPsychics && authPsychics._id) {
+        fetchPaidTimerRequests(); // Initial fetch for paid timer requests
+
+        const intervalId = setInterval(fetchPaidTimerRequests, POLLING_INTERVAL); // Poll every defined interval
+        return () => clearInterval(intervalId); // Cleanup on unmount
+    }
+}, [authPsychics]);
+
+// Use effect for showing notifications
+useEffect(() => {
+  paidTimerRequests.forEach((request) => {
+      if (request.paidTimerStatus === "pending" && !notifiedRequests.has(request._id)) {
+          toast.info(
+              <PaidChatRequestToast
+                  request={request}
+                  onAccept={handleAccept}
+                  onReject={handleReject}
+                  ringtone={ringtone}
+              />,
+              { autoClose: false }
+          );
+          setNotifiedRequests((prev) => new Set(prev).add(request._id));
+      }
+  });
+}, [paidTimerRequests, notifiedRequests, ringtone]);
+
+
+useEffect(() => {
+  const audio = new Audio(notificationSound);
+  setRingtone(audio);
+}, []);
+const startPaidTimer = (duration) => {
+  setPaidTimeRemaining(duration); // Set to the specified duration in seconds
+
+  const countdown = setInterval(() => {
+    setPaidTimeRemaining(prev => {
+      if (prev === 1) {
+        clearInterval(countdown); // Clear the timer when time runs out
+        return null;
+      }
+      return prev - 1;
+    });
+  }, 1000); // Decrement by 1 second every second
+};
+
+  return (
+    <div className="col-12 col-xl-9">
+      <div
+        className="card"
+        style={{ display: "flex", flexDirection: "column", height: "100%" }}
+      >
+        <div
+          className="card-header d-flex justify-content-between align-items-center"
+          style={{
+            backgroundColor: "#a30cad",
+            padding: "1rem",
+            borderRadius: "0.75rem 0.75rem 0 0",
+            borderBottom: "2px solid #FFD700",
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "center",
+          }}
+        >
+          <h3 className="card-title" style={{ margin: 0, color: "#FFD700", flexGrow: 1 }}>
+            {selectedConversation ? (
+              <div className="d-flex align-items-center" style={{ flexGrow: 1 }}>
+                <div
+                  className="d-flex align-items-center"
+                  style={{ flexGrow: 1, marginRight: "1rem" }}
+                >
+                  <h6 className="m-0 text-light" style={{ marginRight: "0.5rem" }}>
+                    {selectedConversation.userName}
+                  </h6>
+                  <span
+                    style={{
+                      fontSize: "20px",
+                      fontWeight: "bold",
+                      color: "#FFD700",
+                    }}
+                  >
+                    To:
+                  </span>
+                  <span
+                    style={{
+                      fontSize: "20px",
+                      fontWeight: "bold",
+                      color: "#FFF",
+                      marginLeft: "0.5rem",
+                    }}
+                  >
+                    {selectedConversation.username}
+                  </span>
+                </div>
+              
+                <button
+                  className={`btn ${busy ? 'btn-warning' : 'btn-outline-light'}`}
+                  onClick={handleToggleStatus}
+                  style={{ marginRight: "1rem" }}
+                >
+                  {busy ? "Set Available" : "Set Busy"}
+                </button>
+              </div>
+            ) : (
+              <TiMessages
+                size={30}
+                color="#FFD700"
+                style={{ cursor: "pointer" }}
+                onClick={() => setSelectedConversation(null)}
+              />
+            )}
+            {/* Display the free timer on the header */}
+            {freeTimeRemaining !== null && (
+              <div style={{ color: "#FFD700", marginLeft: "1rem" }}>
+                Free Time Remaining: {Math.floor(freeTimeRemaining / 60)}:
+                {('0' + (freeTimeRemaining % 60)).slice(-2)} minutes
+              </div>
+            )}
+
+            {allowedPaidTime > 0 && (
+              <div style={{ color: "#FFD700", marginLeft: "1rem" }}>
+                Allowed Paid Chat Time: {Math.floor(allowedPaidTime / 60)}:{('0' + (allowedPaidTime % 60)).slice(-2)} minutes
+              </div>
+            )}
+          </h3>
+        </div>
+        <div className="card-body p-0 flex-grow-1">
+          <PsyMessages />
+          <PsyMessageInput />
+        </div>
+      </div>
+
+      <ToastContainer />
+    </div>
+  );
+};
+
+
+const PaidChatRequestToast = ({ request, onAccept, onReject, ringtone }) => {
+    const [timer, setTimer] = useState(30); // 30 seconds countdown
+    const [isDisabled, setIsDisabled] = useState(false);
+
+    useEffect(() => {
+        if (timer === 0) {
+            setIsDisabled(true);
+            return;
+        }
+
+        if (ringtone) {
+            ringtone.play();
+        }
+
+
+        const intervalId = setInterval(() => {
+            setTimer((prevTimer) => prevTimer - 1);
+        }, 1000);
+
+        return () => clearInterval(intervalId);
+    }, [timer, ringtone, request.userId]);
+
+    const handleAccept = async (requestId) => {
+        try {
+            const response = await fetch(`/api/paidtimer/accept/${request.psychicId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ userId: request.userId }), // Pass user ID in the body
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                console.log("Request accepted:", data);
+                onAccept(request._id); // Notify parent component
+            } else {
+                const errorData = await response.json();
+                console.error("Error accepting request:", errorData.error);
+            }
+        } catch (error) {
+            console.error("Error in handleAccept:", error);
+        }
+        setIsDisabled(true);
+    };
+
+    const handleReject = async () => {
+        try {
+            const response = await fetch(`/api/paidtimer/reject/${request.psychicId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ userId: request.userId }), // Pass user ID in the body
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                console.log("Request rejected:", data);
+                onReject(request._id); // Notify parent component
+            } else {
+                const errorData = await response.json();
+                console.error("Error rejecting request:", errorData.error);
+            }
+        } catch (error) {
+            console.error("Error in handleReject:", error);
+        }
+        setIsDisabled(true);
+    };
+
+    return (
+        <div>
+            <div>
+                <strong>{`New Paid Chat Request from User ID: ${request.userId.userName}`}</strong> {/* Display User ID instead of username */}
+                <div>
+                    <button
+                        className="btn btn-success"
+                        onClick={handleAccept}
+                        disabled={isDisabled}
+                    >
+                        Accept
+                    </button>
+                    <button
+                        className="btn btn-danger"
+                        onClick={handleReject}
+                        disabled={isDisabled}
+                    >
+                        Reject
+                    </button>
+                </div>
+            </div>
+            <div>
+                <span>{`Time remaining: ${timer} seconds`}</span>
+            </div>
+        </div>
+    );
+};
+
+
+
+
+const ChatRequestToast = ({ request, onAccept, onReject, ringtone }) => {
+  const [timer, setTimer] = useState(30); // 30 seconds countdown
+  const [isDisabled, setIsDisabled] = useState(false);
+
+  useEffect(() => {
+    if (timer === 0) {
+      setIsDisabled(true);
+      return;
+    }
+
+    if (ringtone) {
+      ringtone.play();
+    }
+
+    console.log("New chat request from user ID:", request.userId); // Log user ID
+    
+    const intervalId = setInterval(() => {
+      setTimer((prevTimer) => prevTimer - 1);
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [timer, ringtone]);
+
+  return (
+    <div>
+      <div>
+        <strong>{`New Free Chat Request from ${request.userId.username}`}</strong> {/* Display username */}
+        <div>
+          <button
+            className="btn btn-success"
+            onClick={() => {
+              onAccept(request._id);
+              setIsDisabled(true);
+            }}
+            disabled={isDisabled}
+          >
+            Accept
+          </button>
+          <button
+            className="btn btn-danger"
+            onClick={() => onReject(request._id)}
+            disabled={isDisabled}
+          >
+            Reject
+          </button>
+        </div>
+      </div>
+      <div>
+        <span>{`Time remaining: ${timer} seconds`}</span>
+      </div>
+    </div>
+  );
+};
+
+export default PsyMessageContainer;
