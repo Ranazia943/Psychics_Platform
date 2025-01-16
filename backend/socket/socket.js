@@ -6,7 +6,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:3000"],
+    origin: [""],
     methods: ["GET", "POST"],
   },
 });
@@ -17,6 +17,20 @@ const getReceiverSocketId = (receiverId) => {
   return userSocketMap[receiverId];
 };
 
+io.on("connection", (socket) => {
+  // Listen for new messages
+  socket.on("sendMessage", async (message) => {
+    // Save the message to the database
+    const newMessage = await saveMessageToDatabase(message);
+
+    // Emit the new message to the recipient
+    io.to(message.conversationId).emit("newMessage", newMessage);
+
+    // Emit an update to the conversations list
+    const updatedConversations = await getUpdatedConversations();
+    io.emit("updateConversations", updatedConversations);
+  });
+});
 // Handle real-time events and updates
 io.on("connection", (socket) => {
   console.log("A user connected:", socket.id);
@@ -38,13 +52,6 @@ io.on("connection", (socket) => {
     }
   });
 
-  
-
-  
-
- 
-
-  
 });
 
 export { app, io, server, getReceiverSocketId };
