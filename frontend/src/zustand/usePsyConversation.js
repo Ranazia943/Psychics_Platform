@@ -2,10 +2,11 @@ import { create } from "zustand";
 
 const usePsyConversation = create((set) => ({
   selectedConversation: null, // Current selected conversation
-  setSelectedConversation: (conversation) => set({ selectedConversation: conversation }),
+  setSelectedConversation: (conversation) =>
+    set({ selectedConversation: conversation, messages: [] }), // Reset messages when conversation changes
 
   messages: [], // Array of user messages
-  setMessages: (newMessages) => set((state) => ({ messages: [...state.messages, ...newMessages] })), // Append new messages
+  setMessages: (newMessages) => set({ messages: newMessages }), // Replace messages with new messages
 
   chatRequestStatus: null, // Chat request status (e.g., pending, accepted, rejected)
   setChatRequestStatus: (status) => set({ chatRequestStatus: status }),
