@@ -76,7 +76,7 @@ import monthly from './routes/Psychics/Monthly.routes.js'
 import profilestep2 from './routes/Psychics/Profilestep2.routes.js'
 import profilestep3 from './routes/Psychics/Profilestep3.routes.js'
 import profilestep4 from './routes/Psychics/Profilestep4.routes.js';
-import profilestep5 from './routes/Psychics/profilestep5.routes.js'
+import profilestep5 from './routes/Psychics/Profilestep5.routes.js'
 const PORT = process.env.PORT || 5000;
 
 // const __dirname = path.resolve();
