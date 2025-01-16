@@ -21,7 +21,7 @@ export const SocketContextProvider = ({ children }) => {
     const initializeSocket = () => {
       if (authUser || authPsychics) {
         const userId = authUser?._id || authPsychics?._id;
-        const socketInstance = io("http://localhost:3000", {
+        const socketInstance = io("", {
           query: { userId },
           reconnection: true,
           reconnectionAttempts: Infinity,
