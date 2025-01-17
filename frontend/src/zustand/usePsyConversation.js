@@ -1,11 +1,20 @@
 import { create } from "zustand";
 const usePsyConversation = create((set) => ({
+<<<<<<< HEAD
   // Current selected conversation
   selectedConversation: null,
 
   // Set the selected conversation and reset messages
   setSelectedConversation: (conversation) =>
     set({ selectedConversation: conversation, messages: [] }),
+=======
+  selectedConversation: null, // Current selected conversation
+  setSelectedConversation: (conversation) =>
+    set({ selectedConversation: conversation, messages: [] }), // Reset messages when conversation changes
+
+  messages: [], // Array of user messages
+  setMessages: (newMessages) => set({ messages: newMessages }), // Replace messages with new messages
+>>>>>>> b42acbee9514d14bef453ef8bbf7a4b984cf2bbc
 
   // Array of user messages
   messages: [],
