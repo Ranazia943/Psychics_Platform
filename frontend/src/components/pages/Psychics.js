@@ -241,7 +241,7 @@ return (
       </div>
     <div className="col-5 text-center">
       <img
-        src={profile.psychic?.profileImage}
+        src={profile.psychic?.profilePic}
         alt="user-avatar"
         style={{ marginLeft: "15px" }}
         className="img-circle img-fluid"

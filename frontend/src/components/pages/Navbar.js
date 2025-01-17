@@ -5,8 +5,7 @@ import { NavLink, Link, Route, Routes } from "react-router-dom";
 import Search from "./Search";
 import useLogout from "../../hooks/useLogout";
 import { useAuthContext } from "../../context/AuthContext";
-import Button from "react-bootstrap/Button";
-import Modal from "react-bootstrap/Modal";
+
 const Navbar = () => {
   const { loading, logout } = useLogout();
 
@@ -521,27 +520,27 @@ const Navbar = () => {
           </svg>
         </button>
 
-        <NavLink to="/login">
-          <button class="action-btn">
-            <ion-icon name="home-outline">
-              <svg
-                stroke="currentColor"
-                fill="currentColor"
-                stroke-width="0"
-                version="1.1"
-                viewBox="0 0 16 16"
-                height="1em"
-                width="1em"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M9 1.5c0 0.828-0.672 1.5-1.5 1.5s-1.5-0.672-1.5-1.5c0-0.828 0.672-1.5 1.5-1.5s1.5 0.672 1.5 1.5z"></path>
-                <path d="M11.234 8l0.766-0.555-2.083-3.221c-0.092-0.14-0.249-0.225-0.417-0.225h-4c-0.168 0-0.325 0.084-0.417 0.225l-2.083 3.221 0.766 0.555 1.729-2.244 0.601 1.402-2.095 3.841h1.917l0.333 5h1v-5h0.5v5h1l0.333-5h1.917l-2.095-3.842 0.601-1.402 1.729 2.244z"></path>
-              </svg>
-            </ion-icon>
-          </button>
-        </NavLink>
+        <NavLink to={authUser ? "/profile2" : "/login"}>
+    <button class="action-btn">
+      <ion-icon name="home-outline">
+        <svg
+          stroke="currentColor"
+          fill="currentColor"
+          stroke-width="0"
+          version="1.1"
+          viewBox="0 0 16 16"
+          height="1em"
+          width="1em"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path d="M9 1.5c0 0.828-0.672 1.5-1.5 1.5s-1.5-0.672-1.5-1.5c0-0.828 0.672-1.5 1.5-1.5s1.5 0.672 1.5 1.5z"></path>
+          <path d="M11.234 8l0.766-0.555-2.083-3.221c-0.092-0.14-0.249-0.225-0.417-0.225h-4c-0.168 0-0.325 0.084-0.417 0.225l-2.083 3.221 0.766 0.555 1.729-2.244 0.601 1.402-2.095 3.841h1.917l0.333 5h1v-5h0.5v5h1l0.333-5h1.917l-2.095-3.842 0.601-1.402 1.729 2.244z"></path>
+        </svg>
+      </ion-icon>
+    </button>
+  </NavLink>
 
-        <NavLink to="/signup">
+        <Link to="/psychics/login">
           <button class="action-btn" data-mobile-menu-open-btn>
             <ion-icon name="grid-outline">
               <svg
@@ -559,7 +558,7 @@ const Navbar = () => {
               </svg>
             </ion-icon>
           </button>
-        </NavLink>
+        </Link>
       </div>
 
       <nav class="mobile-navigation-menu  has-scrollbar" data-mobile-menu>

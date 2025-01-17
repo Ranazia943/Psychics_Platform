@@ -4307,4 +4307,12 @@ margin: 0; /* Reset margin to ensure equal margin above and below */
   font-size: 0.9rem; /* Paragraph size */
   color: #555; /* Text color */
   line-height: 1.5; /* Line height for readability */
+}.message-input-disabled {
+  text-align: center;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  color: #6c757d;
+  font-style: italic;
 }

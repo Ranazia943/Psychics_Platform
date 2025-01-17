@@ -65,7 +65,7 @@ const Psychics_profile = (props) => {
                          <div className="text-center">
                            <img
                              className="profile-user-img img-fluid img-circle"
-                             src={psychic?.profileImage || '../../dist/img/user4-128x128.jpg'}
+                             src={psychic?.profilePic || '../../dist/img/user4-128x128.jpg'}
                              alt="User profile picture"
                            />
                          </div>

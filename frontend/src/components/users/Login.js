@@ -65,17 +65,9 @@ const Login = () => {
           {/* /.col */}
         </div>
       </form>
-      {/* <div className="social-auth-links text-center mt-2 mb-3">
-        <a href="#" className="btn btn-block " style={{background:'#ff6000' ,color:'#fff'}}>
-          <i className="fab fa-facebook mr-2" /> Sign in using Facebook
-        </a>
-        <a href="#" className="btn btn-block " style={{background:'#90009d' ,color:'#fff'}}>
-          <i className="fab fa-google-plus mr-2" /> Sign in using Google+
-        </a>
-      </div> */}
-      {/* /.social-auth-links */}
+     
       <p className="mb-1">
-        <a href="#">I forgot my password</a>
+        <p>Don't Have account ? <Link to="/signup">Singup</Link></p>
       </p>
       
     </div>

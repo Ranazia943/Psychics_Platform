@@ -117,7 +117,7 @@ import useSignup from "../../hooks/useSignup"
         </a>
         </Link>
       </div> */}
-      <a href="" className="text-center">I already have a membership</a>
+      <p>I already have a membership <Link to="/login">singin</Link></p>
     </div>
     {/* /.form-box */}
   </div>{/* /.card */}

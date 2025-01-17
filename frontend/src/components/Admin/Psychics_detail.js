@@ -141,7 +141,7 @@ const PsychicsDetail = () => {
                       <td>
                         <ul className="list-inline">
                           <li className="list-inline-item">
-                            <img alt="Avatar" className="table-avatar" src={psychic.profileImage || 'https://via.placeholder.com/150'} />
+                            <img alt="Avatar" className="table-avatar" src={psychic.profilePic || 'https://via.placeholder.com/150'} />
                           </li>
                         </ul>
                       </td>

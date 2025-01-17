@@ -73,7 +73,7 @@
             "last 1 safari version"
         ]
     },
-    "extends": [
+    "extends": [    
         "eslint:recommended",
         "plugin:react-refresh/recommended"
     ],

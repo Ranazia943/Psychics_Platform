@@ -22,7 +22,7 @@ const MessageContainer = () => {
   const [ratingModalShown, setRatingModalShown] = useState(false); // Track if the rating modal has been shown
   const [totalTimeSpent, setTotalTimeSpent] = useState(""); // Track total time spent
   const [endedBy, setEndedBy] = useState(""); // Track who ended the timer
-  
+
   // State for rating, comment, and gift amount
   const [rating, setRating] = useState(0); // Default rating is 0 (no stars selected)
   const [comment, setComment] = useState(""); // Default comment is empty
@@ -30,6 +30,45 @@ const MessageContainer = () => {
 
   // Gift amount options
   const giftAmounts = [100, 200, 300, 500, 800, 1000];
+
+  // Save timer state to localStorage
+  const saveTimerState = (timerId, isTimerStarted) => {
+    localStorage.setItem("timerState", JSON.stringify({ timerId, isTimerStarted }));
+  };
+
+  // Load timer state from localStorage
+  const loadTimerState = () => {
+    const timerState = localStorage.getItem("timerState");
+    return timerState ? JSON.parse(timerState) : { timerId: null, isTimerStarted: false };
+  };
+
+  // Restore timer state on component mount
+  useEffect(() => {
+    const { timerId, isTimerStarted } = loadTimerState();
+    if (timerId && isTimerStarted) {
+      setTimerId(timerId);
+      setIsTimerStarted(isTimerStarted);
+
+      // Fetch the latest timer data from the backend
+      const fetchTimerData = async () => {
+        try {
+          const response = await axios.get(`/api/paidtimer/running/${timerId}`);
+          const { remainingTime, userWalletBalance } = response.data;
+
+          setRemainingTime(remainingTime);
+          setWalletBalance(userWalletBalance);
+        } catch (error) {
+          console.error("Error fetching running timer:", error);
+          // If the timer is not running on the backend, reset the frontend state
+          setIsTimerStarted(false);
+          setTimerId(null);
+          localStorage.removeItem("timerState");
+        }
+      };
+
+      fetchTimerData(); // Fetch timer data immediately on component mount
+    }
+  }, []);
 
   useEffect(() => {
     const audio = new Audio(user_ring);
@@ -63,6 +102,7 @@ const MessageContainer = () => {
         toast.success("Paid timer has started.", { autoClose: 3000 });
         setIsTimerStarted(true);
         setRequestStatus("Your paid timer is now running.");
+        saveTimerState(timerId, true); // Save timer state to localStorage
 
         if (ringtone) {
           ringtone.pause();
@@ -97,6 +137,9 @@ const MessageContainer = () => {
         setRequestStatus("Your paid timer has been stopped.");
         setRemainingTime(""); // Clear remaining time
         setWalletBalance(0); // Reset wallet balance
+
+        // Clear timer state from localStorage
+        localStorage.removeItem("timerState");
       }
     } catch (error) {
       console.error("Error ending timer:", error);
@@ -159,20 +202,24 @@ const MessageContainer = () => {
       }
     };
 
+    fetchTimerData(); // Fetch timer data immediately on component mount
     const interval = setInterval(() => fetchTimerData(), 1000);
     return () => clearInterval(interval);
   }, [timerId, isTimerStarted]);
 
   // Monitor PaidTimer status for completion
   useEffect(() => {
-    const checkForCompletedTimer = async () => {
-      if (!timerId || ratingModalShown) return; // Don't check if modal has already been shown
+    if (!timerId || !isTimerStarted) return;
 
+    const checkForCompletedTimer = async () => {
       try {
         const response = await axios.get(`/api/paidtimer/status/${timerId}`);
         const { status } = response.data;
 
         if (status === 'completed') {
+          setIsTimerStarted(false); // Stop the timer
+          setTimerId(null); // Reset timer ID
+          localStorage.removeItem("timerState"); // Clear timer state from localStorage
           setShowRatingModal(true); // Show the RatingModal
         }
       } catch (error) {
@@ -182,7 +229,8 @@ const MessageContainer = () => {
 
     const interval = setInterval(() => checkForCompletedTimer(), 5000);
     return () => clearInterval(interval);
-  }, [timerId, ratingModalShown]);
+  }, [timerId, isTimerStarted]);
+
   const fetchTotalTimeSpent = async () => {
     if (!timerId) return;
 
@@ -199,6 +247,7 @@ const MessageContainer = () => {
       console.error("Error fetching total time spent:", error);
     }
   };
+
   // Function to handle rating, comment, and gift submission
   const handleRatingSubmit = async () => {
     try {

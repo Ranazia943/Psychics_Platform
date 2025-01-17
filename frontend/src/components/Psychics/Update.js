@@ -11,7 +11,7 @@ const Update = () => {
     email: "",
     password: "",
     confirmPassword: "",
-    profileImage: "",
+    profilePic: "",
     birthDate: "",
     category: [],
     primarySkills: [],
@@ -115,9 +115,9 @@ const Update = () => {
         setProfile({
           username: data.profile.username,
           email: data.profile.email,
-          profileImage: data.profile.profileImage,
+          profilePic: data.profile.profilePic,
         });
-        setImagePreview(data.profile.profileImage);
+        setImagePreview(data.profile.profilePic);
       } catch (error) {
         console.error("Error fetching profile:", error);
       }
@@ -289,14 +289,14 @@ const Update = () => {
   const handleonSubmit = async (e) => {
     e.preventDefault();
   
-    let updatedImage = profile.profileImage;
+    let updatedImage = profile.profilePic;
     if (image) {
       updatedImage = await uploadImageToCloudinary();
     }
   
     const updatedProfile = {
       ...profile, // Spread operator to include all fields from the profile state
-      profileImage: updatedImage,
+      profilePic: updatedImage,
     };
   
     try {
@@ -316,7 +316,7 @@ const Update = () => {
   const handleon3Submit = async (e) => {
     e.preventDefault();
   
-    let updatedImage = profile.profileImage;
+    let updatedImage = profile.profilePic;
     if (image) {
       updatedImage = await uploadImageToCloudinary();
     }
@@ -324,7 +324,7 @@ const Update = () => {
     const { _id, ...updateData } = profile; // Destructure to exclude _id
     const updatedProfile = {
       ...updateData,
-      profileImage: updatedImage,
+      profilePic: updatedImage,
       businessSource: updateData.businessSource || "",
       qualification: updateData.qualification || "",
       degreeDiploma: updateData.degreeDiploma || "",
@@ -344,14 +344,14 @@ const Update = () => {
   const handleon4Submit = async (e) => {
     e.preventDefault();
   
-    let updatedImage = profile.profileImage;
+    let updatedImage = profile.profilePic;
     if (image) {
       updatedImage = await uploadImageToCloudinary();
     }
   
     const updatedProfile = {
       ...profile, // Spread operator to include all fields from the profile state
-      profileImage: updatedImage,
+      profilePic: updatedImage,
     };
   
     try {
@@ -406,7 +406,7 @@ const Update = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    let updatedImage = profile.profileImage;
+    let updatedImage = profile.profilePic;
     if (image) {
       updatedImage = await uploadImageToCloudinary();
     }
@@ -415,7 +415,7 @@ const Update = () => {
       email: profile.email,
       username: profile.username,
       phoneno: profile.phoneno,
-      profileImage: updatedImage,
+      profilePic: updatedImage,
     };
 
     // Add password fields only if they are provided
@@ -577,7 +577,7 @@ const Update = () => {
           <label className="d-block mb-2">Profile Photo</label>
           <div className="align-items-center">
             <img
-              src={imagePreview || profile.profileImage || ""}
+              src={imagePreview || profile.profilePic || ""}
               alt="Profile Preview"
               className="border rounded"
               style={{

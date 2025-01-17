@@ -10,7 +10,7 @@ const usePsySignup = () => {
     email,
     phoneno,
     username,
-    profileImage,
+    profilePic,
     password,
     gender,
     birthDate,
@@ -50,7 +50,7 @@ const usePsySignup = () => {
       username,
       phoneno,
       password,
-      profileImage,
+      profilePic,
       gender,
       birthDate,
       category,
@@ -96,7 +96,7 @@ const usePsySignup = () => {
           email,
           username,
           phoneno,
-          profileImage,
+          profilePic,
           password,
           gender,
         }),
@@ -196,7 +196,7 @@ const usePsySignup = () => {
         throw new Error(profileStep5Data.error || "Profile Step 5 failed");
       }
 
-      toast.success("Signup and profile setup completed successfully!");
+      toast.success("Signup and profile setup completed successfully! You can Login after verify your account");
       return true; // Return true if all steps are successful
     } catch (error) {
       toast.error(error.message);
@@ -216,7 +216,7 @@ function handleInputErrors({
   username,
   phoneno,
   password,
-  profileImage,
+  profilePic,
   gender,
   birthDate,
   category,
@@ -252,7 +252,7 @@ function handleInputErrors({
     !email ||
     !username ||
     !password ||
-    !profileImage ||
+    !profilePic ||
     !gender ||
     !phoneno ||
     !birthDate ||

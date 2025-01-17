@@ -93,7 +93,7 @@ const Medium_Psychics = () => {
                           <NavLink to={`/Psychicsprofile/${profile.Psychics}`}>
                             <img
                               className="profile-user-img  img-circle" 
-                              src={profile.psychic.profileImage}
+                              src={profile.psychic.profilePic}
                               alt="User profile picture"
                             />
                           </NavLink>

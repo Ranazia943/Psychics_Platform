@@ -12,7 +12,7 @@ const PsyRegister = () => {
     email: "",
     username: "",
     password: "",
-    profileImage:"",
+    profilePic:"",
     gender: "",
     birthDate: "",
     category: "",
@@ -66,7 +66,7 @@ const PsyRegister = () => {
       });
       const data = await response.json();
       if (data.secure_url) {
-        setFormData((prev) => ({ ...prev, profileImage: data.secure_url }));
+        setFormData((prev) => ({ ...prev, profilePic: data.secure_url }));
         alert("Image uploaded successfully!");
       } else {
         alert("Failed to upload image.");
@@ -85,7 +85,7 @@ const PsyRegister = () => {
         formData.password &&
         formData.phoneno &&
         formData.gender &&
-        formData.profileImage
+        formData.profilePic
       );
     } else if (currentForm === 2) {
       return (
@@ -290,17 +290,17 @@ const PsyRegister = () => {
 </div>
 
 <div className="form-group">
-                <label htmlFor="profileImage">Profile Image *</label>
+                <label htmlFor="profilePic">Profile Image *</label>
                 <input
                   type="file"
-                  id="profileImage"
+                  id="profilePic"
                   accept="image/*"
                   onChange={handleImageUpload}
                 />
               </div>
-              {formData.profileImage && (
+              {formData.profilePic && (
                 <div className="image-preview">
-                  <img src={formData.profileImage} alt="Profile Preview" style={{ width: "100px", height: "100px" }} />
+                  <img src={formData.profilePic} alt="Profile Preview" style={{ width: "100px", height: "100px" }} />
                 </div>
               )}
             </div>

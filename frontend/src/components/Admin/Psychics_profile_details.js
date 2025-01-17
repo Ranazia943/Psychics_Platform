@@ -83,10 +83,10 @@ const Psychics_profile_details = (props) => { // Access props
                 <div className="card-body box-profile">
                   <div className="text-center">
                     {/* Display profile image if available */}
-                    {psychic.profileImage && (
+                    {psychic.profilePic && (
                       <img
                         className="profile-user-img img-fluid img-circle"
-                        src={psychic.profileImage}
+                        src={psychic.profilePic}
                         alt="User profile picture"
                       />
                     )}

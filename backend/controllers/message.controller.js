@@ -6,84 +6,110 @@ import Profile from '../models/Psychics/Profile.model.js';  // Ensure the path i
 import mongoose from 'mongoose';
 
 
+
 export const sendMessage = async (req, res) => {
   try {
-      const { message } = req.body;
-      const { id: receiverId } = req.params;
-      let senderId;
+    const { message } = req.body;
+    const { id: receiverId } = req.params;
+    let senderId;
 
-      if (req.psychics) {
-          senderId = req.psychics._id;
-      } else if (req.user) {
-          senderId = req.user._id;
-      }
+    if (req.psychics) {
+      senderId = req.psychics._id;
+    } else if (req.user) {
+      senderId = req.user._id;
+    }
 
-      let conversation = await Conversation.findOne({
-          participants: { $all: [senderId, receiverId] },
+    // Validate ObjectIds
+    if (!mongoose.Types.ObjectId.isValid(receiverId) || !mongoose.Types.ObjectId.isValid(senderId)) {
+      return res.status(400).json({ error: "Invalid user ID" });
+    }
+
+    // Find or create a conversation
+    let conversation = await Conversation.findOne({
+      participants: { $all: [senderId, receiverId] },
+    });
+
+    if (!conversation) {
+      conversation = await Conversation.create({
+        participants: [senderId, receiverId],
       });
 
-      if (!conversation) {
-          conversation = await Conversation.create({
-              participants: [senderId, receiverId],
-          });
-      }
+      // Emit a newConversation event when a new conversation is created
+      const populatedConversation = await Conversation.findById(conversation._id)
+        .populate("participants", "-password");
 
-      const newMessage = new Message({
-          senderId,
-          receiverId,
-          message,
+      io.emit("newConversation", populatedConversation);
+    }
+
+    // Create a new message
+    const newMessage = new Message({
+      senderId,
+      receiverId,
+      message,
+    });
+
+    // Save the message
+    await newMessage.save();
+
+    // Add the message ID to the conversation's messages array
+    conversation.messages.push(newMessage._id);
+    await conversation.save();
+
+    // Fetch the sender's profile
+    const senderProfile = await User.findById(senderId).select("username profilePic");
+
+    // Emit the new message to the receiver
+    const receiverSocketId = getReceiverSocketId(receiverId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("newMessage", {
+        ...newMessage.toObject(),
+        senderProfile, // Include sender's profile data
       });
+    }
 
-      conversation.messages.push(newMessage._id);
-      await Promise.all([conversation.save(), newMessage.save()]);
-
-      // Emit the new message to the receiver
-      const receiverSocketId = getReceiverSocketId(receiverId);
-      if (receiverSocketId) {
-          io.to(receiverSocketId).emit("newMessage", newMessage);
-      }
-
-      res.status(201).json(newMessage);
+    res.status(201).json(newMessage);
   } catch (error) {
-      console.log("Error in sendMessage controller: ", error.message);
-      res.status(500).json({ error: "Internal server error" });
+    console.log("Error in sendMessage controller: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
-
-
 export const getMessages = async (req, res) => {
   try {
-      const { id: userToChatId } = req.params;
+    const { id: userToChatId } = req.params;
 
-      let senderId;
-      if (req.psychics) {
-          senderId = req.psychics._id;
-      } else if (req.user) {
-          senderId = req.user._id;
-      }
+    let senderId;
+    if (req.psychics) {
+      senderId = req.psychics._id;
+    } else if (req.user) {
+      senderId = req.user._id;
+    }
 
-      // Validate ObjectIds
-      if (!mongoose.Types.ObjectId.isValid(userToChatId) || !mongoose.Types.ObjectId.isValid(senderId)) {
-          return res.status(400).json({ error: "Invalid user ID" });
-      }
+    // Validate ObjectIds
+    if (!mongoose.Types.ObjectId.isValid(userToChatId) || !mongoose.Types.ObjectId.isValid(senderId)) {
+      return res.status(400).json({ error: "Invalid user ID" });
+    }
 
-      console.log(`Sender ID: ${senderId}, User to Chat ID: ${userToChatId}`);
+    console.log(`Sender ID: ${senderId}, User to Chat ID: ${userToChatId}`);
 
-      const conversation = await Conversation.findOne({
-          participants: { $all: [senderId, userToChatId] },
-      }).populate("messages"); // Populate actual messages
+    // Find the conversation and populate the messages
+    const conversation = await Conversation.findOne({
+      participants: { $all: [senderId, userToChatId] },
+    }).populate({
+      path: "messages",
+      options: { sort: { createdAt: 1 } }, // Sort messages by createdAt in ascending order
+    });
 
-      if (!conversation) return res.status(200).json([]);
+    if (!conversation) {
+      return res.status(200).json([]);
+    }
 
-      const messages = conversation.messages;
-
-      res.status(200).json(messages);
+    // Return the messages
+    res.status(200).json(conversation.messages);
   } catch (error) {
-      console.log("Error in getMessages controller: ", error.message);
-      res.status(500).json({ error: "Internal server error" });
+    console.log("Error in getMessages controller: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
-
 
 export const UsersWhoChatted = async (req, res) => {
   try {
@@ -235,7 +261,7 @@ export const getAllConversationsByAdmin = async (req, res) => {
         {
           path: 'receiverId',
           model: 'Psychics', // Explicitly use 'Psychics' model
-          select: 'username profileImage',
+          select: 'username profilePic',
         }
       ]
     })

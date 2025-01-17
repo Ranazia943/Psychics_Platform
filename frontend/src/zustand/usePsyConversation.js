@@ -1,20 +1,50 @@
 import { create } from "zustand";
-
 const usePsyConversation = create((set) => ({
-  selectedConversation: null, // Current selected conversation
-  setSelectedConversation: (conversation) => set({ selectedConversation: conversation }),
+  // Current selected conversation
+  selectedConversation: null,
 
-  messages: [], // Array of user messages
-  setMessages: (newMessages) => set((state) => ({ messages: [...state.messages, ...newMessages] })), // Append new messages
+  // Set the selected conversation and reset messages
+  setSelectedConversation: (conversation) =>
+    set({ selectedConversation: conversation, messages: [] }),
 
-  chatRequestStatus: null, // Chat request status (e.g., pending, accepted, rejected)
+  // Array of user messages
+  messages: [],
+
+  // Replace messages with new messages
+  setMessages: (newMessages) => set({ messages: newMessages }),
+
+  // Append a new message to the existing messages
+  appendMessage: (newMessage) =>
+    set((state) => ({ messages: [...state.messages, newMessage] })),
+
+  // Chat request status (e.g., pending, accepted, rejected)
+  chatRequestStatus: null,
+
+  // Set the chat request status
   setChatRequestStatus: (status) => set({ chatRequestStatus: status }),
 
-  isTyping: false, // Typing status for the conversation
-  setTypingStatus: (isTyping) => set({ isTyping }), // Update typing status
+  // Typing status for the conversation
+  isTyping: false,
 
-  isBusy: false, // Busy status of the conversation
-  setIsBusy: (isBusy) => set({ isBusy }), // Set conversation as busy or not
+  // Update typing status
+  setTypingStatus: (isTyping) => set({ isTyping }),
+
+  // Busy status of the conversation
+  isBusy: false,
+
+  // Set conversation as busy or not
+  setIsBusy: (isBusy) => set({ isBusy }),
+
+  // Array of users in the chat
+  users: [],
+
+  // Add a user to the chat list
+  addUserToChat: (user) => {
+    set((state) => ({
+      users: [...state.users, user], // Add the new user to the existing users array
+    }));
+  },
 }));
+
 
 export default usePsyConversation;

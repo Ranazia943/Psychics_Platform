@@ -22,14 +22,34 @@ const PsyMessageContainer = () => {
   const [walletBalance, setWalletBalance] = useState(0);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [newStatus, setNewStatus] = useState("offline");
-  const [totalTimeSpent, setTotalTimeSpent] = useState(""); // Track total time spent
-  const [endedBy, setEndedBy] = useState(""); // Track who ended the timer
-  const [isTimerCompleted, setIsTimerCompleted] = useState(false); // Track if the timer is completed
+  const [totalTimeSpent, setTotalTimeSpent] = useState("");
+  const [endedBy, setEndedBy] = useState("");
+  const [isTimerCompleted, setIsTimerCompleted] = useState(false);
 
   // Create a reference for the audio object
   const audioRef = useRef(new Audio(psychic_ring));
 
-  // Function to fetch pending requests
+  // Save timer state to localStorage
+  const saveTimerState = (timerId, isTimerStarted) => {
+    localStorage.setItem("timerState", JSON.stringify({ timerId, isTimerStarted }));
+  };
+
+  // Load timer state from localStorage
+  const loadTimerState = () => {
+    const timerState = localStorage.getItem("timerState");
+    return timerState ? JSON.parse(timerState) : { timerId: null, isTimerStarted: false };
+  };
+
+  // Restore timer state on component mount
+  useEffect(() => {
+    const { timerId, isTimerStarted } = loadTimerState();
+    if (timerId && isTimerStarted) {
+      setTimerId(timerId);
+      setIsTimerStarted(isTimerStarted);
+    }
+  }, []);
+
+  // Fetch pending requests
   const fetchPendingRequests = async () => {
     if (!authPsychics) return;
 
@@ -40,13 +60,11 @@ const PsyMessageContainer = () => {
       response.data.forEach((request) => {
         if (!shownRequests.has(request._id)) {
           showToast(request);
-          // Play the ringtone when a new request is fetched
           if (audioRef.current) {
             audioRef.current.play().catch((error) => {
               console.log("Audio play prevented:", error);
             });
           }
-          // Add the request ID to shownRequests to prevent duplicate toasts
           setShownRequests((prev) => new Set(prev.add(request._id)));
         }
       });
@@ -57,7 +75,7 @@ const PsyMessageContainer = () => {
     }
   };
 
-  // Function to show toast for new requests
+  // Show toast for new requests
   const showToast = (request) => {
     let progress = 100;
     const toastId = toast.info(
@@ -95,7 +113,7 @@ const PsyMessageContainer = () => {
 
     // Update progress bar every second
     const interval = setInterval(() => {
-      progress -= (100 / 30); // Decrease progress over 30 seconds
+      progress -= (100 / 30);
       if (progress <= 0) {
         clearInterval(interval);
         toast.dismiss(toastId);
@@ -136,7 +154,7 @@ const PsyMessageContainer = () => {
     }, 1000);
   };
 
-  // Function to handle accept/reject response
+  // Handle accept/reject response
   const handleResponse = async (timerId, action) => {
     try {
       const response = await axios.post(`/api/paidtimer/accept-reject`, { timerId, action });
@@ -144,13 +162,11 @@ const PsyMessageContainer = () => {
         toast.dismiss();
         toast.success(`${action} request successfully.`);
 
-        // Stop the ringtone after action is taken
         if (audioRef.current) {
           audioRef.current.pause();
           audioRef.current.currentTime = 0;
         }
 
-        // Remove the request ID from shownRequests
         setShownRequests((prev) => {
           const updatedRequests = new Set(prev);
           updatedRequests.delete(timerId);
@@ -160,6 +176,7 @@ const PsyMessageContainer = () => {
         if (action === "accept") {
           setTimerId(timerId);
           setIsTimerStarted(true);
+          saveTimerState(timerId, true); // Save timer state to localStorage
         }
       } else {
         toast.dismiss();
@@ -172,7 +189,7 @@ const PsyMessageContainer = () => {
     }
   };
 
-  // Function to end the timer
+  // Handle ending the timer
   const handleEndTimer = async () => {
     if (!timerId) {
       toast.error("No active timer found.");
@@ -182,18 +199,20 @@ const PsyMessageContainer = () => {
     try {
       const response = await axios.post('/api/paidtimer/end', {
         timerId,
-        endedBy: "psychic", // Indicate that the psychic ended the timer
-        psychicId: authPsychics._id, // Pass the psychic's ID for validation
+        endedBy: "psychic",
+        psychicId: authPsychics._id,
       });
 
       if (response.data.message) {
-        toast.success(response.data.message); // Show success message
-        setIsTimerStarted(false); // Stop the timer
-        setRemainingTime(""); // Clear remaining time
-        setWalletBalance(0); // Reset wallet balance
-        setIsTimerCompleted(true); // Mark the timer as completed
+        toast.success(response.data.message);
+        setIsTimerStarted(false);
+        setRemainingTime("");
+        setWalletBalance(0);
+        setIsTimerCompleted(true);
 
-        // Fetch total time spent and who ended the timer
+        // Clear timer state from localStorage
+        localStorage.removeItem("timerState");
+
         fetchTotalTimeSpent();
       }
     } catch (error) {
@@ -202,7 +221,7 @@ const PsyMessageContainer = () => {
     }
   };
 
-  // Function to fetch total time spent and who ended the timer
+  // Fetch total time spent and who ended the timer
   const fetchTotalTimeSpent = async () => {
     if (!timerId) return;
 
@@ -210,17 +229,16 @@ const PsyMessageContainer = () => {
       const response = await axios.get(`/api/paidtimer/total-time-spent/${timerId}`);
       const { totalTimeSpent, endedBy } = response.data;
 
-      setTotalTimeSpent(totalTimeSpent); // Update total time spent
-      setEndedBy(endedBy); // Update who ended the timer
+      setTotalTimeSpent(totalTimeSpent);
+      setEndedBy(endedBy);
 
-      // Show toast notification indicating who ended the chat
       toast.info(`Chat ended by ${endedBy}. Total time spent: ${totalTimeSpent}`);
     } catch (error) {
       console.error("Error fetching total time spent:", error);
     }
   };
 
-  // Function to check if the timer is completed
+  // Check if the timer is completed
   const checkTimerCompletion = async () => {
     if (!timerId) return;
 
@@ -229,12 +247,14 @@ const PsyMessageContainer = () => {
       const { status } = response.data;
 
       if (status === "completed") {
-        setIsTimerStarted(false); // Stop the timer
-        setRemainingTime(""); // Clear remaining time
-        setWalletBalance(0); // Reset wallet balance
-        setIsTimerCompleted(true); // Mark the timer as completed
+        setIsTimerStarted(false);
+        setRemainingTime("");
+        setWalletBalance(0);
+        setIsTimerCompleted(true);
 
-        // Fetch total time spent and who ended the timer
+        // Clear timer state from localStorage
+        localStorage.removeItem("timerState");
+
         fetchTotalTimeSpent();
       }
     } catch (error) {
@@ -242,6 +262,7 @@ const PsyMessageContainer = () => {
     }
   };
 
+  // Fetch pending requests periodically
   useEffect(() => {
     if (authPsychics) {
       setLoading(true);
@@ -251,6 +272,7 @@ const PsyMessageContainer = () => {
     }
   }, [authPsychics]);
 
+  // Fetch timer data periodically
   useEffect(() => {
     if (!timerId || !isTimerStarted) return;
 
@@ -262,17 +284,18 @@ const PsyMessageContainer = () => {
         setRemainingTime(remainingTime);
         setWalletBalance(userWalletBalance);
 
-        // Check if the timer is completed
         await checkTimerCompletion();
       } catch (error) {
         console.error("Error fetching running timer:", error);
       }
     };
 
+    fetchTimerData(); // Fetch timer data immediately on component mount
     const interval = setInterval(() => fetchTimerData(), 1000);
     return () => clearInterval(interval);
   }, [timerId, isTimerStarted]);
 
+  // Update psychic status
   const updateStatus = async (newStatus) => {
     try {
       const response = await axios.put(`/api/psychics/${authPsychics._id}/status`, {
@@ -312,41 +335,62 @@ const PsyMessageContainer = () => {
   return (
     <div className="col-12 col-xl-9">
       <div className="card" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <div className="dropdown" ref={dropdownRef} style={{ marginTop: "10px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          {/* Left Side: Dropdown */}
+          <div className="dropdown" ref={dropdownRef} style={{ marginTop: "10px" }}>
+            <button
+              className="btn btn-secondary dropdown-toggle"
+              type="button"
+              onClick={toggleDropdown}
+            >
+              {newStatus}
+            </button>
+            {isDropdownOpen && (
+              <ul className="dropdown-menu" style={{ display: "block" }}>
+                <li>
                   <button
-                    className="btn btn-secondary dropdown-toggle"
-                    type="button"
-                    onClick={toggleDropdown}
+                    className="dropdown-item"
+                    onClick={() => {
+                      updateStatus("online");
+                      setIsDropdownOpen(false);
+                    }}
                   >
-                    {newStatus}
-                  </button>
-                  {isDropdownOpen && (
-                    <ul className="dropdown-menu" style={{ display: "block" }}>
-                      <li>
-                        <button
-                          className="dropdown-item"
-                          onClick={() => {
-                            updateStatus("online");
-                            setIsDropdownOpen(false);
-                          }}
-                        >
-                          Online
-                        </button>
-                      </li>
-                      <li>
-                        <button
-                          className="dropdown-item"
-                          onClick={() => {
-                            updateStatus("offline");
-                            setIsDropdownOpen(false);
-                          }}
-                        >
-                          Offline
-                        </button>
-                      </li>
-                    </ul>
-                  )}
-                </div>
+            Online
+          </button>
+        </li>
+        <li>
+          <button
+            className="dropdown-item"
+            onClick={() => {
+              updateStatus("offline");
+              setIsDropdownOpen(false);
+            }}
+          >
+            Offline
+          </button>
+        </li>
+      </ul>
+    )}
+  </div>
+
+  {/* Right Side: Timer and Wallet Balance */}
+  <div className="d-flex flex-column text-white align-items-center" style={{ backgroundColor: "purple", padding: "10px", borderRadius: "5px" }}>
+    {!isTimerCompleted && isTimerStarted && (
+      <div>
+        <span>Remaining Time: {remainingTime}</span>
+        <br />
+        <span>Wallet Balance: ${walletBalance}</span>
+      </div>
+    )}
+    {isTimerCompleted && (
+      <div>
+        <span>Total Time Spent: {totalTimeSpent}</span>
+        <br />
+        <span>Ended By: {endedBy}</span>
+      </div>
+    )}
+  </div>
+</div>
                 <br></br>
         <div className="card-header d-flex justify-content-between" style={{ backgroundColor: "#a30cad", padding: "1rem", borderRadius: "0.75rem 0.75rem 0 0", borderBottom: "2px solid #FFD700" }}>
           {selectedConversation ? (
@@ -358,22 +402,7 @@ const PsyMessageContainer = () => {
                 </div>
               
               </div>
-              <div className="d-flex flex-column text-white align-items-center">
-                {!isTimerCompleted && isTimerStarted && (
-                  <div>
-                    <span>Remaining Time: {remainingTime}</span>
-                    <br />
-                    <span>Wallet Balance: ${walletBalance}</span>
-                  </div>
-                )}
-                {isTimerCompleted && (
-                  <div>
-                    <span>Total Time Spent: {totalTimeSpent}</span>
-                    <br />
-                    <span>Ended By: {endedBy}</span>
-                  </div>
-                )}
-              </div>
+             
             </div>
           ) : (
             <h3 className="card-title" style={{ color: "#FFD700" }}>Select a conversation to start</h3>

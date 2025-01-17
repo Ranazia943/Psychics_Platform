@@ -1,6 +1,5 @@
 import React, { useState, useRef, useCallback } from "react";
 import useGetPsyConversations from "../../../hooks/useGetPsyConversations";
-import { getRandomEmoji } from "../../../utils/emojis";
 import PsyConversation from "./PsyConversation";
 
 const PsyConversations = () => {
@@ -37,10 +36,10 @@ const PsyConversations = () => {
       ref={containerRef}
       style={{
         display: "flex",
-        flexDirection: "column", // Stack items vertically
-        overflowY: "auto", // Enable vertical scrolling
-        height: "500px", // Fixed height to enable scrolling (adjust as needed)
-        padding: "8px 0", // Optional padding
+        flexDirection: "column",
+        overflowY: "auto",
+        height: "500px",
+        padding: "8px 0",
       }}
     >
       {visibleConversations.map((conversation, idx) => (
@@ -49,11 +48,10 @@ const PsyConversations = () => {
           ref={
             idx === visibleConversations.length - 1 ? lastConversationRef : null
           }
-          style={{ marginBottom: "10px" }} // Spacing between conversations
+          style={{ marginBottom: "10px" }}
         >
           <PsyConversation
             conversation={conversation}
-            emoji={getRandomEmoji()}
             lastIdx={idx === visibleConversations.length - 1}
           />
         </div>
@@ -64,7 +62,7 @@ const PsyConversations = () => {
           className="loading loading-spinner mx-auto"
           style={{
             display: "block",
-            margin: "0 auto", // Center the loading spinner
+            margin: "0 auto",
           }}
         ></span>
       )}

@@ -67,7 +67,7 @@ const PsyProfile = () => {
                   <div className="text-center">
                     <img
                       className="profile-user-img img-fluid img-circle"
-                      src={psychic.profileImage || avatar}
+                      src={psychic.profilePic || avatar}
                       alt="User profile picture"
                     />
                   </div>
@@ -183,7 +183,7 @@ const PsyProfile = () => {
                           <div className="user-block">
                             <img
                               className="img-circle img-bordered-sm"
-                              src={psychic.profileImage || avatar}
+                              src={psychic.profilePic || avatar}
                               alt="User Image"
                             />
                             <span className="username">

@@ -55,7 +55,7 @@ const Conversation = ({ conversation, lastIdx }) => {
         {/* Profile Picture */}
         <div className="avatar">
           <img
-            src={conversation.profileImage || "/default-profile-pic.png"}
+            src={conversation.profilePic || "/default-profile-pic.png"}
             className="rounded-circle mr-1"
             alt={conversation.username || "Profile"}
             width={40}

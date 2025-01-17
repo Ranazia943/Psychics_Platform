@@ -2,17 +2,18 @@ import { useEffect, useRef } from "react";
 import usePsyGetMessages from "../../../hooks/usePsyGetMessages";
 import MessageSkeleton from "../../../skeletons/MessageSkeleton";
 import PsyMessage from "./PsyMessage";
-import usePsyListenMessages from "../../../hooks/usePsyListenMessages"; // Import the psychic listener
+import usePsyListenMessages from "../../../hooks/usePsyListenMessages";
 
 const PsyMessages = () => {
-  const { messages, loading } = usePsyGetMessages();
+  const { messages = [], loading } = usePsyGetMessages(); // Fallback to empty array
   usePsyListenMessages();
 
   const lastMessageRef = useRef();
 
   // Ensure unique messages
-  const uniqueMessages = Array.from(new Set(messages.map(m => m._id)))
-    .map(id => messages.find(m => m._id === id));
+  const uniqueMessages = Array.from(new Set(messages.map((m) => m._id))).map(
+    (id) => messages.find((m) => m._id === id)
+  );
 
   useEffect(() => {
     setTimeout(() => {
@@ -27,8 +28,11 @@ const PsyMessages = () => {
           <div className="direct-chat-infos clearfix">
             {!loading &&
               uniqueMessages.length > 0 &&
-              uniqueMessages.map((message) => (
-                <div key={message._id} ref={lastMessageRef}>
+              uniqueMessages.map((message, index) => (
+                <div
+                  key={message._id}
+                  ref={index === uniqueMessages.length - 1 ? lastMessageRef : null}
+                >
                   <PsyMessage message={message} />
                 </div>
               ))}
@@ -47,6 +51,5 @@ const PsyMessages = () => {
     </div>
   );
 };
-
 
 export default PsyMessages;

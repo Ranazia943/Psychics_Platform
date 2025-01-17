@@ -5,7 +5,7 @@ import Profile from "../models/Psychics/Profile.model.js"
 
 export const psy_signup = async (req, res) => {
   try {
-    const { email, username, password,profileImage, phoneno, gender } = req.body;
+    const { email, username, password,profilePic, phoneno, gender } = req.body;
 
     // Basic input validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -45,7 +45,7 @@ export const psy_signup = async (req, res) => {
       email,
       username,
       password: hashedPassword,
-      profileImage,
+      profilePic,
       phoneno,
       gender,
       verified: false, // Default status
@@ -138,7 +138,7 @@ export const fetchProfile = async (req, res) => {
         email: psychic.email,
         username: psychic.username,
         phoneno: psychic.phoneno,
-        profileImage: psychic.profileImage,
+        profilePic: psychic.profilePic,
         gender: psychic.gender,
       },
     });
@@ -152,7 +152,7 @@ export const fetchProfile = async (req, res) => {
 export const updateProfile = async (req, res) => {
   try {
     const { id } = req.params;
-    const { email, username, newPassword, confirmNewPassword, phoneno, profileImage } = req.body;
+    const { email, username, newPassword, confirmNewPassword, phoneno, profilePic } = req.body;
 
     // Fetch the psychic
     const psychic = await Psychics.findById(id);
@@ -164,7 +164,7 @@ export const updateProfile = async (req, res) => {
     if (email) updateFields.email = email;
     if (username) updateFields.username = username;
     if (phoneno) updateFields.phoneno = phoneno;
-    if (profileImage) updateFields.profileImage = profileImage;
+    if (profilePic) updateFields.profilePic = profilePic;
 
     if (newPassword) {
       if (newPassword !== confirmNewPassword) {
@@ -186,7 +186,7 @@ export const updateProfile = async (req, res) => {
         email: updatedPsychic.email,
         username: updatedPsychic.username,
         phoneno: updatedPsychic.phoneno,
-        profileImage: updatedPsychic.profileImage,
+        profilePic: updatedPsychic.profilePic,
       },
     });
   } catch (error) {

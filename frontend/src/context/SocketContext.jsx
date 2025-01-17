@@ -56,6 +56,14 @@ export const SocketContextProvider = ({ children }) => {
           });
         });
 
+        socketInstance.on("newMessage", ({ newMessage, senderProfile }) => {
+          console.log("New message received:", newMessage);
+          console.log("Sender profile:", senderProfile);
+
+          // Emit the senderProfile to update the conversation list
+          socketInstance.emit("updateConversationList", { senderProfile });
+        });
+
         socketInstance.on("timerRequest", (data) => {
           console.log("Timer request received:", data);
           // Handle the timer request data and show a toast notification
